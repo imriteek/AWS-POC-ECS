@@ -32,6 +32,7 @@ artifacts:
     - appspec.yml
     - docker-compose.yml
     - start.sh
+  name: backend_artifacts
   discard-paths: yes
 
 secondary-artifacts:
