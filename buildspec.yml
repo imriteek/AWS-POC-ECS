@@ -9,16 +9,23 @@ phases:
     commands:
       - echo "Logging in to Docker Hub"
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  
+
   build:
     commands:
-      
+      - cd frontend/
+      - npm install 
+      - npm run build
+
       - cd ../backend/
       - docker build -t imriteek/backend:$CODEBUILD_BUILD_NUMBER .
       - docker tag imriteek/backend:$CODEBUILD_BUILD_NUMBER imriteek/backend:latest
       - docker images
       - docker push imriteek/backend:$CODEBUILD_BUILD_NUMBER
       - docker push imriteek/backend:latest
+
+      - cd ../admin/
+      - npm install 
+      - npm run build
       
 artifacts:
   files:
@@ -26,3 +33,22 @@ artifacts:
     - docker-compose.yml
     - start.sh
   discard-paths: yes
+  type: S3
+  location: aws-poc-backend
+
+secondary-artifacts:
+  admin_dist_artifacts:
+    base-directory: admin/dist
+    files:
+      - '**/*'
+    discard-paths: no
+    type: S3
+    location: aws-poc-admin
+
+  frontend_dist_artifacts:
+    base-directory: frontend/dist
+    files:
+      - '**/*'
+    discard-paths: no
+    type: S3
+    location: aws-poc-frontend
