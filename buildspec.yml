@@ -38,13 +38,18 @@ secondary-artifacts:
   admin_artifacts:
     base-directory: admin/dist
     files:
-      - '**/*'
+      - 'index.html'
+      - 'vite.svg'
+      - "assests/"
     name: admin_artifacts
     discard-paths: no
 
   frontend_artifacts:
     base-directory: frontend/dist
     files:
-      - '**/*'
+      - 'header_img.png'
+      - 'index.html'
+      - 'vite.svg'
+      - "assests/"
     name: frontend_artifacts
     discard-paths: no
