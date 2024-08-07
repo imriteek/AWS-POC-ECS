@@ -1,0 +1,28 @@
+version: 0.2
+
+env:
+  variables:
+    DOCKER_USERNAME: "imriteek"
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Docker Hub"
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  
+  build:
+    commands:
+      
+      - cd ../backend/
+      - docker build -t imriteek/backend:$CODEBUILD_BUILD_NUMBER .
+      - docker tag imriteek/backend:$CODEBUILD_BUILD_NUMBER imriteek/backend:latest
+      - docker images
+      - docker push imriteek/backend:$CODEBUILD_BUILD_NUMBER
+      - docker push imriteek/backend:latest
+      
+artifacts:
+  files:
+    - appspec.yml
+    - docker-compose.yml
+    - start.sh
+  discard-paths: yes

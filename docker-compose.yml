@@ -1,0 +1,22 @@
+version: '3'
+services:
+  # frontend:
+  #   image: imriteek/frontend:latest
+  #   #build: ./frontend/
+  #   command: serve -s dist
+  #   ports:
+  #     - "3000:3000"
+
+  backend:
+    image: imriteek/backend:latest
+    command: npm run server
+    ports:
+      - "4000:4000"
+
+  # admin:
+  #   image: imriteek/admin:latest
+  #   #build: ./admin/
+  #   command: serve -s dist
+  #   ports: 
+  #     - "3001:3000"
+

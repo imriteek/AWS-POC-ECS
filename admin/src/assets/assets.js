@@ -14,4 +14,4 @@ export const assets ={
     parcel_icon
 }
 
-export const url = 'http://localhost:4000'
+export const url = "http://aws-poc-alb-1797031006.ap-south-1.elb.amazonaws.com";
