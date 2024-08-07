@@ -37,18 +37,14 @@ artifacts:
   location: aws-poc-backend
 
 secondary-artifacts:
-  admin_dist_artifacts:
+  admin_artifacts:
     base-directory: admin/dist
     files:
-      - '**/*'
+      - 'admin/dist/*'
     discard-paths: no
-    type: S3
-    location: aws-poc-admin
 
-  frontend_dist_artifacts:
+  frontend_artifacts:
     base-directory: frontend/dist
     files:
-      - '**/*'
+      - 'frontend/dist/*'
     discard-paths: no
-    type: S3
-    location: aws-poc-frontend
