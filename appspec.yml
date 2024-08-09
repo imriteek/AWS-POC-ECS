@@ -16,7 +16,7 @@ permissions:
     group: ec2-user
 
 hooks:
-  BeforeInstall:
+  Install:
     - location: before_install.sh
       timeout: 300
       runas: root
