@@ -3,20 +3,11 @@ os: linux
 files:
   - source: start.sh
     destination: /home/ec2-user
+  - source: before_install.sh
+    destination: /home/ec2-user  
   - source: docker-compose.yml
     destination: /home/ec2-user
 
-# permissions:
-#   - object: /home/ec2-user/script.sh
-#     mode: 777
-#     owner: ec2-user
-#     type:
-#       - file
-#   - object: /home/ec2-user/docker-compose.yml
-#     mode: 777
-#     owner: ec2-user
-#     type:
-#       - file
 
 permissions:
   - object: /
@@ -25,7 +16,18 @@ permissions:
     group: ec2-user
 
 hooks:
+  BeforeInstall:
+    - location: scripts/before_install.sh
+      timeout: 300
+      runas: ec2-user
+
   ApplicationStart:
     - location: start.sh
       timeout: 300
       runas: ec2-user
+
+  ApplicationStop:
+    - location: stop.sh
+      timeout: 300
+      runas: ec2-user
+
