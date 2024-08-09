@@ -24,10 +24,10 @@ hooks:
   ApplicationStart:
     - location: start.sh
       timeout: 300
-      runas: ec2-user
+      runas: root
 
   ApplicationStop:
     - location: stop.sh
       timeout: 300
-      runas: ec2-user
+      runas: root
 
