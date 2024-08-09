@@ -1,23 +1,10 @@
 version: 0.2
 
-env:
-  variables:
-    AWS_DEFAULT_REGION: "ap-south-1"  # Set the AWS region for AWS CLI commands
-    ECR_REPO_URI: "public.ecr.aws/w9u0u2e3/imriteek"
-
 phases:
-  install:
-    commands:
-      - nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &
-      - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
-  # pre_build:
-  #   commands:
-  #     - echo "Logging in to Docker Hub"
-  #     - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
-      - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REPO_URI
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
   build:
     commands:
@@ -26,11 +13,16 @@ phases:
       - npm run build
 
       - cd ../backend/
-      - docker build -t imriteek:$CODEBUILD_BUILD_NUMBER .
-      - docker tag imriteek:$CODEBUILD_BUILD_NUMBER imriteek:backend
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      # - docker build -t $IMAGE_REPO_NAME:$CODEBUILD_BUILD_NUMBER .
+      - echo Build completed on `date`
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      # - docker tag imriteek:$CODEBUILD_BUILD_NUMBER imriteek:backend
       - docker images
-      - docker push imriteek:$CODEBUILD_BUILD_NUMBER
-      - docker push imriteek:backend
+      - echo Pushing the Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      # - docker push imriteek:$CODEBUILD_BUILD_NUMBER
+      # - docker push imriteek:backend
 
       - cd ../admin/
       - npm install 
