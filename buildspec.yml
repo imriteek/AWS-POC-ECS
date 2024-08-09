@@ -5,10 +5,14 @@ env:
     DOCKER_USERNAME: "imriteek"
 
 phases:
+  # pre_build:
+  #   commands:
+  #     - echo "Logging in to Docker Hub"
+  #     - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   pre_build:
     commands:
-      - echo "Logging in to Docker Hub"
-      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - echo Logging in to Amazon ECR...
+      - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/w9u0u2e3
 
   build:
     commands:
@@ -17,11 +21,11 @@ phases:
       - npm run build
 
       - cd ../backend/
-      - docker build -t imriteek/backend:$CODEBUILD_BUILD_NUMBER .
-      - docker tag imriteek/backend:$CODEBUILD_BUILD_NUMBER imriteek/backend:latest
+      - docker build -t imriteek:$CODEBUILD_BUILD_NUMBER .
+      - docker tag imriteek:$CODEBUILD_BUILD_NUMBER imriteek:backend
       - docker images
-      - docker push imriteek/backend:$CODEBUILD_BUILD_NUMBER
-      - docker push imriteek/backend:latest
+      - docker push imriteek:$CODEBUILD_BUILD_NUMBER
+      - docker push imriteek:backend
 
       - cd ../admin/
       - npm install 
