@@ -2,9 +2,7 @@ version: 0.0
 os: linux
 files:
   - source: start.sh
-    destination: /home/ec2-user
-  - source: before_install.sh
-    destination: /home/ec2-user  
+    destination: /home/ec2-user 
   - source: docker-compose.yml
     destination: /home/ec2-user
 
@@ -16,18 +14,8 @@ permissions:
     group: ec2-user
 
 hooks:
-  Install:
-    - location: before_install.sh
-      timeout: 300
-      runas: root
 
   ApplicationStart:
     - location: start.sh
       timeout: 300
       runas: root
-
-  # ApplicationStop:
-  #   - location: stop.sh
-  #     timeout: 300
-  #     runas: root
-

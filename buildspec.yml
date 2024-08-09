@@ -33,7 +33,6 @@ artifacts:
     - appspec.yml
     - docker-compose.yml
     - start.sh
-    - before_install.sh
   name: backend_artifacts
   discard-paths: yes
 
