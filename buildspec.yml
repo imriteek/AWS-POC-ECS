@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    DOCKER_USERNAME: "imriteek"
+    AWS_DEFAULT_REGION: "ap-south-1"  # Set the AWS region for AWS CLI commands
     ECR_REPO_URI: "public.ecr.aws/w9u0u2e3/imriteek"
 
 phases:
