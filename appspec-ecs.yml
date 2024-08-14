@@ -1,0 +1,10 @@
+version: 0.0
+os: linux
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: "arn:aws:ecs:us-west-2:123456789012:task-definition/my-task-def:1"
+        LoadBalancerInfo:
+          ContainerName: "backend"
+          ContainerPort: 4000
