@@ -12,6 +12,8 @@ phases:
 
   build:
     commands:
+      - echo "Renaming appspec-ec2.yml to appspec.yml"
+      - cp appspec-ec2.yml appspec.yml
       - cd frontend/
       - npm install 
       - npm run build
@@ -32,6 +34,7 @@ phases:
       - cd ../admin/
       - npm install 
       - npm run build
+
       
 artifacts:
   files:
