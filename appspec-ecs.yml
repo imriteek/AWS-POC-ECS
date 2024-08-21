@@ -21,6 +21,3 @@ Resources:
           - Base: 1
             CapacityProvider: "FARGATE" # Use the appropriate CapacityProvider
             Weight: 2
-          - Base: 0
-            CapacityProvider: "FARGATE"
-            Weight: 1
