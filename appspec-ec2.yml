@@ -6,7 +6,6 @@ files:
   - source: docker-compose.yml
     destination: /home/ec2-user
 
-
 hooks:
   ApplicationStart:
     - location: start.sh
