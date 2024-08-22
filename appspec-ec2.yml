@@ -5,6 +5,8 @@ files:
     destination: /home/ec2-user 
   - source: docker-compose.yml
     destination: /home/ec2-user
+  - source: prometheus-config.yml
+    destination: /home/ec2-user
 
 hooks:
   ApplicationStart:
