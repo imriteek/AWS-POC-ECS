@@ -14,3 +14,7 @@ services:
     volumes:
       - /home/ec2-user/prometheus-config.yml:/etc/prometheus/prometheus.yml
 
+  grafana-server:
+    image: grafana/grafana-oss
+    ports:
+      - 3000:3000
