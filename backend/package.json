@@ -23,6 +23,6 @@
     "stripe": "^15.12.0",
     "validator": "^13.12.0",
     "prom-client": "^14.0.1",  
-    "request-time": "^2.1.1" 
+    "request-time": "^2.3.2" 
   }
 }
