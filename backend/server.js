@@ -31,8 +31,16 @@ const httpRequestDurationMicroseconds = new client.Histogram({
     buckets: [50, 100, 200, 300, 400, 500, 1000] // Define your buckets here
 });
 
+// Custom metrics example
+const totalReqCounter = new client.Counter({
+    name: 'Total_req',
+    help: 'Tells total req'
+});
+
 // Middleware to measure request duration
 app.use((req, res, next) => {
+    // Increment the total request counter
+    totalReqCounter.inc();
     const end = httpRequestDurationMicroseconds.startTimer();
     res.on('finish', () => {
         end({ method: req.method, route: req.route?.path || req.url, code: res.statusCode });
