@@ -3,7 +3,7 @@ Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
-        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:10" # Replace with your actual TaskDefinition ARN
+        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:11" # Replace with your actual TaskDefinition ARN
         LoadBalancerInfo:
           ContainerName: "backend" # Replace with your actual container name
           ContainerPort: 4000
