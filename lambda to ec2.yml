@@ -1,0 +1,160 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for EC2 instance and Lambda function with IAM roles
+
+Parameters:
+  InstanceType:
+    Type: String
+    Default: t2.micro  # Use an instance type that supports UEFI
+    Description: EC2 instance type for the backup
+  
+  S3BucketName:
+    Type: String
+    Description: Base name for the S3 bucket to store backup files
+    
+
+Resources:
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: EC2Instavaibhav
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref EC2InstanceRole
+
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !GetAtt MyEC2SecurityGroup.GroupId
+      KeyName: bkey
+      ImageId: ami-0ec0e125bb6c6e8ec  
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y amazon-ssm-agent
+          systemctl enable amazon-ssm-agent
+          systemctl start amazon-ssm-agent
+          echo -e '#!/bin/bash\nDATE=$(date +%Y-%m-%d-%H-%M-%S)\nfree -h > /tmp/ram-storage-$DATE.txt\naws s3 cp /tmp/ram-storage-$DATE.txt s3://${S3BucketName}/ram-storage-$DATE.txt' > /home/ec2-user/backup-ram-storage.sh
+          chmod +x /home/ec2-user/backup-ram-storage.sh
+      IamInstanceProfile: !Ref EC2InstanceProfile
+
+  MyEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub
+        - "${BucketBase}-${AWS::StackName}-${AWS::Region}"
+        - BucketBase: !Ref S3BucketName
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LambdaVaibhav
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        - "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: BackupRAMStorageVaibhav
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.8
+      Timeout: 300
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import json
+
+          def lambda_handler(event, context):
+              ssm_client = boto3.client('ssm')
+              instance_id = os.environ['INSTANCE_ID']
+              s3_bucket = os.environ['S3_BUCKET_NAME']
+              s3_key_prefix = 'backup-ram-storage-output/'
+
+              try:
+                  response = ssm_client.send_command(
+                      InstanceIds=[instance_id],
+                      DocumentName="AWS-RunShellScript",
+                      Parameters={'commands': ['bash /home/ec2-user/backup-ram-storage.sh']},
+                      OutputS3BucketName=s3_bucket,
+                      OutputS3KeyPrefix=s3_key_prefix
+                  )
+                  return response
+              except Exception as e:
+                  return {
+                      "errorMessage": str(e),
+                      "errorType": e.__class__.__name__
+                  }
+
+      Environment:
+        Variables:
+          INSTANCE_ID: !Ref MyEC2Instance
+          S3_BUCKET_NAME: !Ref S3Bucket
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+
+  LambdaInvokeScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Scheduled rule to trigger Lambda function
+      ScheduleExpression: rate(1 minute)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt LambdaFunction.Arn
+          Id: LambdaTarget
+
+Outputs:
+  EC2InstanceRoleArn:
+    Description: IAM Role ARN for EC2 instance
+    Value: !GetAtt EC2InstanceRole.Arn
+
+  LambdaExecutionRoleArn:
+    Description: IAM Role ARN for Lambda function execution
+    Value: !GetAtt LambdaExecutionRole.Arn
+
+  S3BucketName:
+    Description: S3 Bucket Name
+    Value: !Ref S3Bucket

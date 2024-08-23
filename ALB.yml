@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  # Create the security group for ALB
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Allow HTTP traffic to ALB
+      VpcId: vpc-0954c0033edaa2d0d
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+  
+  # Create the security group for EC2 instances
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Allow traffic from ALB on port 4000
+      VpcId: vpc-0954c0033edaa2d0d
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 4000
+          ToPort: 4000
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+
+  # Create the Application Load Balancer
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: MyApplicationLoadBalancer
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets:
+        - subnet-05a38353813c77181
+        - subnet-0befb367f6c2ae83e
+        - subnet-030fbd0b398d0f6d9
+
+  # Create a target group for EC2 instances
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: MyTargetGroup
+      Port: 4000
+      Protocol: HTTP
+      VpcId: vpc-0954c0033edaa2d0d
+      TargetType: instance
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: traffic-port
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+
+  # Create a listener for the ALB
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
+
+  # Create an EC2 instance
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      KeyName: Demo-key  # Replace with your key pair name
+      ImageId: ami-0ad21ae1d0696ad58  # Replace with your AMI ID
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      SubnetId: subnet-05a38353813c77181  # Replace with your subnet ID
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo yum update -y
+          sudo yum install -y httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+          echo "Hello from EC2" > /var/www/html/index.html
+          sudo yum install -y nodejs
+          # Ensure that your application is listening on port 4000
+          # You would typically start your application here
+          # Example: node /path/to/your/app.js
+
+Outputs:
+  LoadBalancerDNSName:
+    Value: !GetAtt ALB.DNSName
+    Description: "DNS name of the load balancer"
