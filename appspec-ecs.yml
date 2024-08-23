@@ -24,7 +24,7 @@ Resources:
   - TargetServiceprometheus:
       Type: AWS::ECS::Service
       Properties:
-        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:10"
+        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:11"
         LoadBalancerInfo:
           ContainerName: "prometheus"
           ContainerPort: 9090
@@ -45,7 +45,7 @@ Resources:
   - TargetServicegrafana:
       Type: AWS::ECS::Service
       Properties:
-        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:10"
+        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:11"
         LoadBalancerInfo:
           ContainerName: "grafana"
           ContainerPort: 3000
