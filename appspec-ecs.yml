@@ -3,14 +3,10 @@ Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
-        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:11" # Replace with your actual TaskDefinition ARN
+        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:10" # Replace with your actual TaskDefinition ARN
         LoadBalancerInfo:
           ContainerName: "backend" # Replace with your actual container name
           ContainerPort: 4000
-          - ContainerName: "prometheus" # Replace with your actual container name
-            ContainerPort: 9090
-          - ContainerName: "grafana" # Replace with your actual container name
-            ContainerPort: 3000
         PlatformVersion: "LATEST"
         NetworkConfiguration:
           AwsvpcConfiguration:
@@ -25,3 +21,74 @@ Resources:
           - Base: 1
             CapacityProvider: "FARGATE" # Use the appropriate CapacityProvider
             Weight: 2
+  - TargetServiceprometheus:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:10"
+        LoadBalancerInfo:
+          ContainerName: "prometheus"
+          ContainerPort: 9090
+        PlatformVersion: "LATEST"
+        NetworkConfiguration:
+          AwsvpcConfiguration:
+            Subnets: 
+              - "subnet-0befb367f6c2ae83e"
+              - "subnet-030fbd0b398d0f6d9" 
+              - "subnet-05a38353813c77181"  
+            SecurityGroups: 
+              - "sg-070cc1446a58d7002"
+            AssignPublicIp: "ENABLED"
+        CapacityProviderStrategy:
+          - Base: 1
+            CapacityProvider: "FARGATE"
+            Weight: 2
+  - TargetServicegrafana:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:10"
+        LoadBalancerInfo:
+          ContainerName: "grafana"
+          ContainerPort: 3000
+        PlatformVersion: "LATEST"
+        NetworkConfiguration:
+          AwsvpcConfiguration:
+            Subnets: 
+              - "subnet-0befb367f6c2ae83e"
+              - "subnet-030fbd0b398d0f6d9" 
+              - "subnet-05a38353813c77181"  
+            SecurityGroups: 
+              - "sg-070cc1446a58d7002"
+            AssignPublicIp: "ENABLED"
+        CapacityProviderStrategy:
+          - Base: 1
+            CapacityProvider: "FARGATE"
+            Weight: 2
+
+
+# version: 0.0
+# Resources:
+#   - TargetService:
+#       Type: AWS::ECS::Service
+#       Properties:
+#         TaskDefinition: "arn:aws:ecs:ap-south-1:905418426404:task-definition/aws-poc-td:11" # Replace with your actual TaskDefinition ARN
+#         LoadBalancerInfo:
+#           ContainerName: "backend" # Replace with your actual container name
+#           ContainerPort: 4000
+#           - ContainerName: "prometheus" # Replace with your actual container name
+#             ContainerPort: 9090
+#           - ContainerName: "grafana" # Replace with your actual container name
+#             ContainerPort: 3000
+#         PlatformVersion: "LATEST"
+#         NetworkConfiguration:
+#           AwsvpcConfiguration:
+#             Subnets: 
+#               - "subnet-0befb367f6c2ae83e"   # Replace with your actual Subnet IDs
+#               - "subnet-030fbd0b398d0f6d9" 
+#               - "subnet-05a38353813c77181"  
+#             SecurityGroups: 
+#               - "sg-070cc1446a58d7002"    # Replace with your actual Security Group ID
+#             AssignPublicIp: "ENABLED"
+#         CapacityProviderStrategy:
+#           - Base: 1
+#             CapacityProvider: "FARGATE" # Use the appropriate CapacityProvider
+#             Weight: 2
