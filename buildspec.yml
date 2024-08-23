@@ -6,27 +6,39 @@ phases:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/$IMAGE_REPO_NAME
-      - IMAGE_TAG=Backend_Build-$CODEBUILD_BUILD_NUMBER
+      - IMAGE_TAG_BACK=Backend_Build-$CODEBUILD_BUILD_NUMBER
+      - IMAGE_TAG_PROM=Prom_Build-$CODEBUILD_BUILD_NUMBER
+      - IMAGE_TAG_GRAF=Graf_Build-$CODEBUILD_BUILD_NUMBER
 
 
   build:
     commands:
-      - echo "Renaming appspec-ec2.yml to appspec.yml"
-      - cp appspec-ec2.yml appspec.yml
+      - echo "Renaming appspec-ecs.yml to appspec.yml"
+      - cp appspec-ecs.yml appspec.yml
       - cd frontend/
       - npm install 
       - npm run build
 
       - cd ../backend/
       - docker build -t $REPOSITORY_URI:latest .
+
       # - docker build -t $IMAGE_REPO_NAME:$CODEBUILD_BUILD_NUMBER .
       - echo Build completed on `date`
-      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - docker pull prom/prometheus:latest
+      - docker pull grafana/grafana-oss:latest
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG_BACK
+      - docker tag prom/prometheus:latest $REPOSITORY_URI:$IMAGE_TAG_PROM
+      - docker tag grafana/grafana-oss:latest $REPOSITORY_URI:$IMAGE_TAG_GRAF
+
+
       # - docker tag imriteek:$CODEBUILD_BUILD_NUMBER imriteek:backend
       - docker images
       - echo Pushing the Docker image...
       - docker push $REPOSITORY_URI:latest
-      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - docker push $REPOSITORY_URI:$IMAGE_TAG_BACK
+      - docker push $REPOSITORY_URI:$IMAGE_TAG_PROM
+      - docker push $REPOSITORY_URI:$IMAGE_TAG_GRAF
+
       # - docker push imriteek:$CODEBUILD_BUILD_NUMBER
       # - docker push imriteek:backend
 
@@ -38,8 +50,8 @@ phases:
 artifacts:
   files:
     - appspec.yml
-    - docker-compose.yml
-    - start.sh
+    # - docker-compose.yml
+    # - start.sh
     - prometheus-config.yml
   name: backend_artifacts
   discard-paths: yes

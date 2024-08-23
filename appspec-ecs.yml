@@ -7,6 +7,10 @@ Resources:
         LoadBalancerInfo:
           ContainerName: "backend" # Replace with your actual container name
           ContainerPort: 4000
+          - ContainerName: "prometheus" # Replace with your actual container name
+            ContainerPort: 9090
+          - ContainerName: "grafana" # Replace with your actual container name
+            ContainerPort: 3000
         PlatformVersion: "LATEST"
         NetworkConfiguration:
           AwsvpcConfiguration:
