@@ -5,10 +5,14 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/$IMAGE_REPO_NAME
-      - IMAGE_TAG_BACK=Backend_Build-$CODEBUILD_BUILD_NUMBER
-      - IMAGE_TAG_PROM=Prom_Build-$CODEBUILD_BUILD_NUMBER
-      - IMAGE_TAG_GRAF=Graf_Build-$CODEBUILD_BUILD_NUMBER
+      
+      - REPOSITORY_URI_1=$AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/$IMAGE_REPO_NAME_1
+      - REPOSITORY_URI_2=$AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/$IMAGE_REPO_NAME_2
+      - REPOSITORY_URI_3=$AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/$IMAGE_REPO_NAME_3
+      
+      - IMAGE_TAG_BACK=$CODEBUILD_BUILD_NUMBER
+      - IMAGE_TAG_PROM=$CODEBUILD_BUILD_NUMBER
+      - IMAGE_TAG_GRAF=$CODEBUILD_BUILD_NUMBER
 
 
   build:
@@ -20,27 +24,27 @@ phases:
       - npm run build
 
       - cd ../backend/
-      - docker build -t $REPOSITORY_URI:latest .
-
-      # - docker build -t $IMAGE_REPO_NAME:$CODEBUILD_BUILD_NUMBER .
+      - docker build -t $REPOSITORY_URI_1:latest .
       - echo Build completed on `date`
       - docker pull prom/prometheus:latest
       - docker pull grafana/grafana-oss:latest
-      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG_BACK
-      - docker tag prom/prometheus:latest $REPOSITORY_URI:$IMAGE_TAG_PROM
-      - docker tag grafana/grafana-oss:latest $REPOSITORY_URI:$IMAGE_TAG_GRAF
 
+      - docker tag $REPOSITORY_URI_1:latest $REPOSITORY_URI_1:$IMAGE_TAG_BACK
+      - docker tag prom/prometheus:latest $REPOSITORY_URI_2:latest
+      - docker tag prom/prometheus:latest $REPOSITORY_URI_2:$IMAGE_TAG_PROM
+      - docker tag grafana/grafana-oss:latest $REPOSITORY_URI_3:latest
+      - docker tag grafana/grafana-oss:latest $REPOSITORY_URI_3:$IMAGE_TAG_GRAF
 
-      # - docker tag imriteek:$CODEBUILD_BUILD_NUMBER imriteek:backend
       - docker images
       - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI:latest
-      - docker push $REPOSITORY_URI:$IMAGE_TAG_BACK
-      - docker push $REPOSITORY_URI:$IMAGE_TAG_PROM
-      - docker push $REPOSITORY_URI:$IMAGE_TAG_GRAF
+      - docker push $REPOSITORY_URI_1:latest
+      - docker push $REPOSITORY_URI_1:$IMAGE_TAG_BACK
 
-      # - docker push imriteek:$CODEBUILD_BUILD_NUMBER
-      # - docker push imriteek:backend
+      - docker push $REPOSITORY_URI_2:latest
+      - docker push $REPOSITORY_URI_2:$IMAGE_TAG_PROM
+      
+      - docker push $REPOSITORY_URI_3:latest
+      - docker push $REPOSITORY_URI_3:$IMAGE_TAG_GRAF
 
       - cd ../admin/
       - npm install 
