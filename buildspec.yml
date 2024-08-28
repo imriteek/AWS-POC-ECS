@@ -74,3 +74,5 @@ artifacts:
         - '**/*'
       name: frontend_artifacts
       discard-paths: no
+
+# Random comment
