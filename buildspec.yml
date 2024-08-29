@@ -15,7 +15,7 @@ phases:
       - IMAGE_TAG_GRAF=$CODEBUILD_BUILD_NUMBER
 
       # Set up S3 bucket and keys for the first time
-      - BUCKET_NAME=my-bucket
+      - BUCKET_NAME=docker-image-automation
       - HASH_KEY=dockerfile-hash.txt
       - PROM_DIGEST_KEY=prometheus-digest.txt
       - GRAF_DIGEST_KEY=grafana-digest.txt
