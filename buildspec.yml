@@ -14,6 +14,20 @@ phases:
       - IMAGE_TAG_PROM=$CODEBUILD_BUILD_NUMBER
       - IMAGE_TAG_GRAF=$CODEBUILD_BUILD_NUMBER
 
+      # Set up S3 bucket and keys for the first time
+      - BUCKET_NAME=docker-image-automation
+      - HASH_KEY=dockerfile-hash.txt
+      - PROM_DIGEST_KEY=prometheus-digest.txt
+      - GRAF_DIGEST_KEY=grafana-digest.txt
+      - aws s3api head-bucket --bucket $BUCKET_NAME || aws s3 mb s3://$BUCKET_NAME
+
+      - echo "Calculating Dockerfile hash..."
+      - DOCKERFILE_HASH=$(sha256sum backend/Dockerfile | awk '{print $1}')
+      - echo "Dockerfile Hash:$DOCKERFILE_HASH"
+
+      # Fetch the previous Dockerfile hash (or create a new one if it doesn't exist)
+      - PREV_DOCKERFILE_HASH=$(aws s3 cp s3://$BUCKET_NAME/$HASH_KEY - || echo "")
+      - if [ -z "$PREV_DOCKERFILE_HASH" ]; then echo "No previous Dockerfile hash found. Assuming first run."; PREV_DOCKERFILE_HASH=""; fi
 
   build:
     commands:
@@ -24,33 +38,61 @@ phases:
       - npm run build
 
       - cd ../backend/
-      - docker build -t $REPOSITORY_URI_1:latest .
+      - if [ "$DOCKERFILE_HASH" == "$PREV_DOCKERFILE_HASH" ]; then
+          echo "Dockerfile has not changed. Skipping Docker build and push.";
+        else
+          echo "Dockerfile has changed. Proceeding with Docker build.";
+          docker build -t $REPOSITORY_URI_1:latest .;
+          docker tag $REPOSITORY_URI_1:latest $REPOSITORY_URI_1:$IMAGE_TAG_BACK;
+          echo "Pushing the Docker image...";
+          docker push $REPOSITORY_URI_1:latest;
+          docker push $REPOSITORY_URI_1:$IMAGE_TAG_BACK;
+          echo $DOCKERFILE_HASH | aws s3 cp - s3://$BUCKET_NAME/$HASH_KEY;
+        fi
+
       - echo Build completed on `date`
+
+      # Pull the public images
       - docker pull prom/prometheus:latest
       - docker pull grafana/grafana-oss:latest
 
-      - docker tag $REPOSITORY_URI_1:latest $REPOSITORY_URI_1:$IMAGE_TAG_BACK
-      - docker tag prom/prometheus:latest $REPOSITORY_URI_2:latest
-      - docker tag prom/prometheus:latest $REPOSITORY_URI_2:$IMAGE_TAG_PROM
-      - docker tag grafana/grafana-oss:latest $REPOSITORY_URI_3:latest
-      - docker tag grafana/grafana-oss:latest $REPOSITORY_URI_3:$IMAGE_TAG_GRAF
+      # Get digests of the public images
+      - PROM_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' prom/prometheus:latest)
+      - GRAF_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' grafana/grafana-oss:latest)
 
-      - docker images
-      - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI_1:latest
-      - docker push $REPOSITORY_URI_1:$IMAGE_TAG_BACK
+      # Fetch previous digests (or create new ones if they don't exist)
+      - PREV_PROM_DIGEST=$(aws s3 cp s3://$BUCKET_NAME/$PROM_DIGEST_KEY - || echo "")
+      - PREV_GRAF_DIGEST=$(aws s3 cp s3://$BUCKET_NAME/$GRAF_DIGEST_KEY - || echo "")
+      - if [ -z "$PREV_PROM_DIGEST" ]; then echo "No previous Prometheus digest found. Assuming first run."; PREV_PROM_DIGEST=""; fi
+      - if [ -z "$PREV_GRAF_DIGEST" ]; then echo "No previous Grafana digest found. Assuming first run."; PREV_GRAF_DIGEST=""; fi
 
-      - docker push $REPOSITORY_URI_2:latest
-      - docker push $REPOSITORY_URI_2:$IMAGE_TAG_PROM
-      
-      - docker push $REPOSITORY_URI_3:latest
-      - docker push $REPOSITORY_URI_3:$IMAGE_TAG_GRAF
+      # Check if the digests have changed
+      - if [ "$PROM_DIGEST" != "$PREV_PROM_DIGEST" ]; then
+          echo "Prometheus image has changed. Proceeding with tagging and pushing.";
+          docker tag prom/prometheus:latest $REPOSITORY_URI_2:latest;
+          docker tag $REPOSITORY_URI_2:latest $REPOSITORY_URI_2:$IMAGE_TAG_PROM;
+          docker push $REPOSITORY_URI_2:latest;
+          docker push $REPOSITORY_URI_2:$IMAGE_TAG_PROM;
+          echo $PROM_DIGEST | aws s3 cp - s3://$BUCKET_NAME/$PROM_DIGEST_KEY;
+        else
+          echo "Prometheus image has not changed. Skipping push.";
+        fi
+
+      - if [ "$GRAF_DIGEST" != "$PREV_GRAF_DIGEST" ]; then
+          echo "Grafana image has changed. Proceeding with tagging and pushing.";
+          docker tag grafana/grafana-oss:latest $REPOSITORY_URI_3:latest;
+          docker tag $REPOSITORY_URI_3:latest $REPOSITORY_URI_3:$IMAGE_TAG_GRAF;
+          docker push $REPOSITORY_URI_3:latest;
+          docker push $REPOSITORY_URI_3:$IMAGE_TAG_GRAF;
+          echo $GRAF_DIGEST | aws s3 cp - s3://$BUCKET_NAME/$GRAF_DIGEST_KEY;
+        else
+          echo "Grafana image has not changed. Skipping push.";
+        fi
 
       - cd ../admin/
       - npm install 
       - npm run build
 
-      
 artifacts:
   files:
     - appspec.yml
@@ -74,3 +116,82 @@ artifacts:
         - '**/*'
       name: frontend_artifacts
       discard-paths: no
+
+
+
+# version: 0.2
+
+# phases:
+#   pre_build:
+#     commands:
+#       - echo Logging in to Amazon ECR...
+#       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      
+#       - REPOSITORY_URI_1=$AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/$IMAGE_REPO_NAME_1
+#       - REPOSITORY_URI_2=$AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/$IMAGE_REPO_NAME_2
+#       - REPOSITORY_URI_3=$AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/$IMAGE_REPO_NAME_3
+      
+#       - IMAGE_TAG_BACK=$CODEBUILD_BUILD_NUMBER
+#       - IMAGE_TAG_PROM=$CODEBUILD_BUILD_NUMBER
+#       - IMAGE_TAG_GRAF=$CODEBUILD_BUILD_NUMBER
+
+
+#   build:
+#     commands:
+#       - echo "Renaming appspec-ecs.yml to appspec.yml"
+#       - cp appspec-ecs.yml appspec.yml
+#       - cd frontend/
+#       - npm install 
+#       - npm run build
+
+#       - cd ../backend/
+#       - docker build -t $REPOSITORY_URI_1:latest .
+#       - echo Build completed on `date`
+#       - docker pull prom/prometheus:latest
+#       - docker pull grafana/grafana-oss:latest
+
+#       - docker tag $REPOSITORY_URI_1:latest $REPOSITORY_URI_1:$IMAGE_TAG_BACK
+#       - docker tag prom/prometheus:latest $REPOSITORY_URI_2:latest
+#       - docker tag $REPOSITORY_URI_2:latest $REPOSITORY_URI_2:$IMAGE_TAG_PROM
+#       - docker tag grafana/grafana-oss:latest $REPOSITORY_URI_3:latest
+#       - docker tag $REPOSITORY_URI_3:latest $REPOSITORY_URI_3:$IMAGE_TAG_GRAF
+
+#       - docker images
+#       - echo Pushing the Docker image...
+#       - docker push $REPOSITORY_URI_1:latest
+#       - docker push $REPOSITORY_URI_1:$IMAGE_TAG_BACK
+
+#       - docker push $REPOSITORY_URI_2:latest
+#       - docker push $REPOSITORY_URI_2:$IMAGE_TAG_PROM
+      
+#       - docker push $REPOSITORY_URI_3:latest
+#       - docker push $REPOSITORY_URI_3:$IMAGE_TAG_GRAF
+
+#       - cd ../admin/
+#       - npm install 
+#       - npm run build
+
+      
+# artifacts:
+#   files:
+#     - appspec.yml
+#    # - docker-compose.yml
+#    # - start.sh
+#     - prometheus-config.yml
+#   name: backend_artifacts
+#   discard-paths: yes
+
+#   secondary-artifacts:
+#     admin_artifacts:
+#       base-directory: admin/dist
+#       files:
+#         - '**/*'
+#       name: admin_artifacts
+#       discard-paths: no
+
+#     frontend_artifacts:
+#       base-directory: frontend/dist
+#       files:
+#         - '**/*'
+#       name: frontend_artifacts
+#       discard-paths: no
