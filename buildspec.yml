@@ -23,7 +23,7 @@ phases:
 
       - echo "Calculating Dockerfile hash..."
       - DOCKERFILE_HASH=$(sha256sum backend/Dockerfile | awk '{print $1}')
-      - echo "Dockerfile Hash: $DOCKERFILE_HASH"
+      - echo "Dockerfile Hash:$DOCKERFILE_HASH"
 
       # Fetch the previous Dockerfile hash (or create a new one if it doesn't exist)
       - PREV_DOCKERFILE_HASH=$(aws s3 cp s3://$BUCKET_NAME/$HASH_KEY - || echo "")
