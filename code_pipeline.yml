@@ -1,0 +1,184 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to create an AWS CodePipeline.
+
+Parameters:
+  CodeCommitRepoName:
+    Type: String
+    Description: Name of the CodeCommit repository
+    Default: MyCodeCommitRepo
+
+  CodeBuildProjectName:
+    Type: String
+    Description: Name of the CodeBuild project
+    Default: MyCodeBuildProject
+
+  CodeDeployApplicationName:
+    Type: String
+    Description: Name of the CodeDeploy application
+    Default: MyCodeDeployApplication
+
+Resources:
+  # S3 Bucket for Artifacts
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my_pipeline_bucket
+
+  # IAM Role for CodePipeline
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - codepipeline.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: CodePipelinePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+                  - s3:GetBucketLocation
+                Resource: 
+                  - arn:aws:s3:::my_pipeline_bucket/*
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - codedeploy:*
+                Resource: '*'
+
+  # CodePipeline
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: '1'
+                Provider: CodeCommit
+              OutputArtifacts:
+                - Name: SourceOutput
+              Configuration:
+                RepositoryName: !Ref CodeCommitRepoName
+                BranchName: main
+              RunOrder: 1
+
+        - Name: Build
+          Actions:
+            - Name: BuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ProjectName: !Ref CodeBuildProjectName
+              RunOrder: 1
+
+        - Name: Deploy
+          Actions:
+            - Name: DeployAction
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: '1'
+                Provider: CodeDeploy
+              InputArtifacts:
+                - Name: BuildOutput
+              Configuration:
+                ApplicationName: !Ref CodeDeployApplicationName
+                DeploymentGroupName: !Sub ${CodeDeployApplicationName}-DeploymentGroup
+              RunOrder: 1
+
+  # IAM Role for CodeBuild
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement: 
+          - Effect: Allow
+            Principal:
+              Service: 
+                - codebuild.amazonaws.com
+            Action: 
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement: 
+              - Effect: Allow
+                Action: 
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: 
+                  - arn:aws:s3:::my_pipeline_bucket/*
+
+  # CodeBuild Project
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties: 
+      Name: !Ref CodeBuildProjectName
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts: 
+        Type: CODEPIPELINE
+      Environment: 
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        Type: LINUX_CONTAINER
+      Source: 
+        Type: CODEPIPELINE
+
+  # CodeDeploy Application
+  CodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties: 
+      ApplicationName: !Ref CodeDeployApplicationName
+
+  # CodeDeploy Deployment Group
+  CodeDeployDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties: 
+      ApplicationName: !Ref CodeDeployApplicationName
+      DeploymentGroupName: !Sub ${CodeDeployApplicationName}-DeploymentGroup
+      ServiceRoleArn: !GetAtt CodePipelineRole.Arn
+      DeploymentConfigName: CodeDeployDefault.OneAtATime
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events:
+          - DEPLOYMENT_FAILURE
+
+Outputs:
+  PipelineName:
+    Description: "The name of the CodePipeline"
+    Value: !Ref CodePipeline
+  CodeCommitRepoName:
+    Description: "The name of the CodeCommit repository"
+    Value: !Ref CodeCommitRepoName

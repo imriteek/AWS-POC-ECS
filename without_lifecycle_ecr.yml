@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create a public Amazon ECR repository named 'backend'.
+
+Resources:
+  BackendECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: backend
+      ImageScanningConfiguration:
+        scanOnPush: true  # Optional: Enable image scanning on push
+      PublicRepository:
+        PublicRepository: true # Set to true for public repositories
+
+Outputs:
+  ECRRepositoryUri:
+    Description: "The URI of the 'backend' ECR repository"
+    Value: !GetAtt 
+      - BackendECRRepository
+      - RepositoryUri

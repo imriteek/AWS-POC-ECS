@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Amazon DocumentDB (with MongoDB compatibility) Cluster
+
+Resources:
+  DocDBSubnetGroup:
+    Type: AWS::DocDB::DBSubnetGroup
+    Properties: 
+      DBSubnetGroupDescription: "Subnet group for DocumentDB"
+      SubnetIds: 
+        - subnet-05a38353813c77181
+        - subnet-0befb367f6c2ae83e
+        - subnet-030fbd0b398d0f6d9
+
+  DocDBClusterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: "Security group for DocumentDB cluster"
+      VpcId: vpc-0954c0033edaa2d0d
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 27017
+          ToPort: 27017
+          CidrIp: "0.0.0.0/0"
+
+  DocDBCluster:
+    Type: AWS::DocDB::DBCluster
+    Properties:
+      DBClusterIdentifier: "myfirst-document-db"
+      MasterUsername: "adminuser"
+      MasterUserPassword: "root1234"
+      DBSubnetGroupName: !Ref Documentdb
+      VpcSecurityGroupIds:
+        - !Ref DocDBClusterSecurityGroup
+      EngineVersion: "4.0.0"
+      StorageEncrypted: true
+
+  DocDBInstance1:
+    Type: AWS::DocDB::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref DocDBCluster
+      DBInstanceClass: db.t3.medium
+      AvailabilityZone: !Select [ 0, !GetAZs ]
+      DBInstanceIdentifier: "my-docdb-instance-1"
+
+Outputs:
+  DocDBClusterEndpoint:
+    Description: "DocumentDB Cluster Endpoint"
+    Value: !GetAtt DocDBCluster.Endpoint
+    Export:
+      Name: DocDBClusterEndpoint
+
+  DocDBClusterReaderEndpoint:
+    Description: "DocumentDB Cluster Reader Endpoint"
+    Value: !GetAtt DocDBCluster.ReadEndpoint
+    Export:
+      Name: DocDBClusterReaderEndpoint
