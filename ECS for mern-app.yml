@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates an ECS cluster, service, and task definition with frontend and backend containers
+
+Resources:
+  MyCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: my_cluster
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow HTTP inbound traffic"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0  # Open to the Internet, adjust as necessary
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 4000
+          ToPort: 4000
+          CidrIp: 0.0.0.0/0
+      VpcId: vpc-0954c0033edaa2d0d  # Replace with your VPC ID
+
+  MyTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: my_mern_task
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '256'
+      Memory: '512'
+      ContainerDefinitions:
+        - Name: frontend
+          Image: vib123/frontend:3
+          PortMappings:
+            - ContainerPort: 3000
+              HostPort: 3000
+          Essential: true
+        - Name: backend
+          Image: vib123/backend:3
+          PortMappings:
+            - ContainerPort: 4000
+              HostPort: 4000
+          Essential: true
+
+  MyService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref MyCluster
+      ServiceName: my_mern_service
+      TaskDefinition: !Ref MyTaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - subnet-05a38353813c77181
+            - subnet-0befb367f6c2ae83e
+            - subnet-030fbd0b398d0f6d9
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref MySecurityGroup
+      # Optionally configure load balancer if needed
+      # LoadBalancers:
+      #   - ContainerName: frontend
+      #     ContainerPort: 3000
+      #     TargetGroupArn: <your-target-group-arn>
+      #   - ContainerName: backend
+      #     ContainerPort: 4000
+      #     TargetGroupArn: <your-target-group-arn>
+
+Outputs:
+  ClusterName:
+    Description: "ECS Cluster Name"
+    Value: !Ref MyCluster
+
+  TaskDefinitionArn:
+    Description: "Task Definition ARN"
+    Value: !Ref MyTaskDefinition
+
+  ServiceName:
+    Description: "ECS Service Name"
+    Value: !Ref MyService

@@ -1,0 +1,169 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create EC2 instances, security group, ALB, target group, and ASG
+
+Parameters:
+  VPCId:
+    Type: String
+    Description: VPC Id
+  SubnetAId:
+    Type: String
+    Description: Subnet A Id
+  SubnetBId:
+    Type: String
+    Description: Subnet B Id
+  SubnetCId:
+    Type: String
+    Description: Subnet C Id
+  KeyName:
+    Type: String
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+
+Resources:
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH, HTTP, and HTTPS
+      VpcId: !Ref VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  EC2InstanceA:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      SubnetId: !Ref SubnetAId
+      ImageId: ami-0ec0e125bb6c6e8ec
+      KeyName: !Ref KeyName
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "Hello from EC2InstanceA $(hostname -f)" > /var/www/html/index.html
+
+  EC2InstanceB:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      SubnetId: !Ref SubnetBId
+      ImageId: ami-0ec0e125bb6c6e8ec
+      KeyName: !Ref KeyName
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "Hello from EC2InstanceB $(hostname -f)" > /var/www/html/index.html
+
+  EC2InstanceC:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - !Ref InstanceSecurityGroup
+      SubnetId: !Ref SubnetBId
+      ImageId: ami-0ec0e125bb6c6e8ec
+      KeyName: !Ref KeyName
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "Hello from EC2InstanceC $(hostname -f)" > /var/www/html/index.html
+
+  MyTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 200
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VPCId
+      Targets:
+        - Id: !Ref EC2InstanceA
+        - Id: !Ref EC2InstanceB
+        - Id: !Ref EC2InstanceC
+
+  MyLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: my-loadbalancer
+      Subnets:
+        - !Ref SubnetAId
+        - !Ref SubnetBId
+        - !Ref SubnetCId
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      Scheme: internet-facing
+
+  MyListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref MyTargetGroup
+      LoadBalancerArn: !Ref MyLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  MyAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - !Ref SubnetAId
+        - !Ref SubnetBId
+        - !Ref SubnetCId
+      TargetGroupARNs:
+        - !Ref MyTargetGroup
+      LaunchConfigurationName: !Ref MyLaunchConfiguration
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 1
+
+  MyLaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: ami-0ec0e125bb6c6e8ec
+      InstanceType: t2.micro
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      KeyName: !Ref KeyName
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "Hello from the Auto Scaling Group instance $(hostname -f)" > /var/www/html/index.html
+
+Outputs:
+  ALBEndpoint:
+    Description: ALB DNS Name
+    Value: !GetAtt MyLoadBalancer.DNSName
