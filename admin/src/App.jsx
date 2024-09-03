@@ -10,7 +10,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
 
-  const url = "http://aws-poc-ecs-alb-1533352154.ap-south-1.elb.amazonaws.com";
+  const url = "http://aws-poc-ecs-alb-1873006434.ap-south-1.elb.amazonaws.com";
 
   return (
     <div>
