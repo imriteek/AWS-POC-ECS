@@ -14,4 +14,4 @@ export const assets ={
     parcel_icon
 }
 
-export const url = "http://aws-poc-ecs-alb-1795605982.ap-south-1.elb.amazonaws.com";
+export const url = "https://aws-poc-ecs-alb-1795605982.ap-south-1.elb.amazonaws.com";
