@@ -7,7 +7,7 @@ const stripe =  new Stripe(process.env.STRIPE_SECRET_KEY)
 // Placing user order for frontend
 const placeOrder = async (req, res) =>{
 
-    const frontend_url = 'http://aws-poc-frontend.s3-website.ap-south-1.amazonaws.com';
+    const frontend_url = 'https://aws-poc-frontend.s3-website.ap-south-1.amazonaws.com';
     try {
         const newOrder = new orderModel({
             userId: req.body.userId,
